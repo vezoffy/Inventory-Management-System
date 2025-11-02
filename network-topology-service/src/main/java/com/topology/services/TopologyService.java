@@ -4,6 +4,7 @@ import com.topology.clients.CustomerClient;
 import com.topology.clients.InventoryClient;
 import com.topology.dto.*;
 import com.topology.enums.AssetType;
+import com.topology.exceptions.CustomerInactiveException;
 import com.topology.exceptions.InfrastructureDeviceException;
 import com.topology.exceptions.TopologyServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,6 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class TopologyService {
@@ -27,41 +27,49 @@ public class TopologyService {
 
     public Mono<CustomerPathResponse> traceCustomerPath(Long customerId) {
         return customerClient.getCustomerAssignment(customerId)
-                .flatMap(customer -> inventoryClient.getSplitterDetails(customer.getSplitterId())
-                        .flatMap(splitter -> inventoryClient.getFdhDetails(splitter.getFdhId())
-                                .flatMap(fdh -> inventoryClient.getCoreSwitchDetails(fdh.getCoreSwitchId())
-                                        .flatMap(coreSwitch -> inventoryClient.getHeadendDetails(coreSwitch.getHeadendId())
-                                                .map(headend -> {
-                                                    // Build the nested path from the bottom up
-                                                    HierarchicalNetworkNode customerNode = new HierarchicalNetworkNode();
-                                                    customerNode.setType("CUSTOMER");
-                                                    customerNode.setIdentifier(customer.getName());
-                                                    customerNode.setDetail("Port: " + customer.getAssignedPort());
-                                                    customerNode.setAssets(customer.getAssignedAssets());
+                .flatMap(customer -> {
+                    // Check if the customer is inactive
+                    if (!"ACTIVE".equalsIgnoreCase(customer.getStatus())) {
+                        return Mono.error(new CustomerInactiveException("Customer with ID " + customerId + " is not active and has no assigned network path."));
+                    }
 
-                                                    String splitterDetail = splitter.getPortCapacity() + " Ports";
-                                                    if (splitter.getNeighborhood() != null && !splitter.getNeighborhood().isEmpty()) {
-                                                        splitterDetail += ", " + splitter.getNeighborhood();
-                                                    }
-                                                    HierarchicalNetworkNode splitterNode = new HierarchicalNetworkNode("SPLITTER", "Splitter-" + splitter.getId(), splitterDetail, splitter.getSerialNumber(), splitter.getModel());
-                                                    splitterNode.setChild(customerNode);
+                    // Proceed with building the path if the customer is active
+                    return inventoryClient.getSplitterDetails(customer.getSplitterId())
+                            .flatMap(splitter -> inventoryClient.getFdhDetails(splitter.getFdhId())
+                                    .flatMap(fdh -> inventoryClient.getCoreSwitchDetails(fdh.getCoreSwitchId())
+                                            .flatMap(coreSwitch -> inventoryClient.getHeadendDetails(coreSwitch.getHeadendId())
+                                                    .map(headend -> {
+                                                        HierarchicalNetworkNode customerNode = new HierarchicalNetworkNode();
+                                                        customerNode.setType("CUSTOMER");
+                                                        customerNode.setIdentifier(customer.getName());
+                                                        customerNode.setDetail("Port: " + customer.getAssignedPort());
+                                                        customerNode.setAssets(customer.getAssignedAssets());
 
-                                                    HierarchicalNetworkNode fdhNode = new HierarchicalNetworkNode("FDH", fdh.getName(), fdh.getRegion(), fdh.getSerialNumber(), fdh.getModel());
-                                                    fdhNode.setChild(splitterNode);
+                                                        String splitterDetail = splitter.getPortCapacity() + " Ports";
+                                                        if (splitter.getNeighborhood() != null && !splitter.getNeighborhood().isEmpty()) {
+                                                            splitterDetail += ", " + splitter.getNeighborhood();
+                                                        }
+                                                        HierarchicalNetworkNode splitterNode = new HierarchicalNetworkNode("SPLITTER", "Splitter-" + splitter.getId(), splitterDetail, splitter.getSerialNumber(), splitter.getModel());
+                                                        splitterNode.setChild(customerNode);
 
-                                                    HierarchicalNetworkNode coreSwitchNode = new HierarchicalNetworkNode("CORE_SWITCH", coreSwitch.getName(), coreSwitch.getLocation(), coreSwitch.getSerialNumber(), coreSwitch.getModel());
-                                                    coreSwitchNode.setChild(fdhNode);
+                                                        HierarchicalNetworkNode fdhNode = new HierarchicalNetworkNode("FDH", fdh.getName(), fdh.getRegion(), fdh.getSerialNumber(), fdh.getModel());
+                                                        fdhNode.setChild(splitterNode);
 
-                                                    HierarchicalNetworkNode headendNode = new HierarchicalNetworkNode("HEADEND", headend.getName(), headend.getLocation(), headend.getSerialNumber(), headend.getModel());
-                                                    headendNode.setChild(coreSwitchNode);
+                                                        HierarchicalNetworkNode coreSwitchNode = new HierarchicalNetworkNode("CORE_SWITCH", coreSwitch.getName(), coreSwitch.getLocation(), coreSwitch.getSerialNumber(), coreSwitch.getModel());
+                                                        coreSwitchNode.setChild(fdhNode);
 
-                                                    return new CustomerPathResponse(customerId, customer.getName(), headendNode);
-                                                })
-                                        )
-                                )
-                        )
-                );
+                                                        HierarchicalNetworkNode headendNode = new HierarchicalNetworkNode("HEADEND", headend.getName(), headend.getLocation(), headend.getSerialNumber(), headend.getModel());
+                                                        headendNode.setChild(coreSwitchNode);
+
+                                                        return new CustomerPathResponse(customerId, customer.getName(), headendNode);
+                                                    })
+                                            )
+                                    )
+                            );
+                });
     }
+
+    // ... (other methods remain the same) ...
 
     public Mono<FdhTopologyResponse> getFdhTopology(Long fdhId) {
         Mono<FdhDto> fdhMono = inventoryClient.getFdhDetails(fdhId);

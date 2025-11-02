@@ -61,7 +61,7 @@ public class NetworkHierarchyService {
         Asset asset = assetRepository.findById(assetResponse.getId()).orElseThrow(() -> new AssetNotFoundException("Failed to create asset during hierarchy setup"));
 
         Headend headend = new Headend();
-        headend.setAsset(asset); // Set the parent object
+        headend.setAsset(asset);
         headend.setName(request.getName());
         headend.setLocation(request.getLocation());
         Headend savedHeadend = headendRepository.save(headend);
@@ -126,7 +126,7 @@ public class NetworkHierarchyService {
         splitter.setFdhId(request.getFdhId());
         splitter.setPortCapacity(request.getPortCapacity());
         splitter.setUsedPorts(0);
-        splitter.setNeighborhood(request.getNeighborhood()); // Set the new field
+        splitter.setNeighborhood(request.getNeighborhood());
         Splitter savedSplitter = splitterRepository.save(splitter);
         return toSplitterDto(savedSplitter);
     }
@@ -151,6 +151,12 @@ public class NetworkHierarchyService {
     public FdhDto getFdhDetails(Long id) {
         Fdh fdh = fdhRepository.findById(id).orElseThrow(() -> new AssetNotFoundException("FDH not found"));
         return toFdhDto(fdh);
+    }
+
+    public List<FdhDto> getAllFdhs() {
+        return fdhRepository.findAll().stream()
+                .map(this::toFdhDto)
+                .collect(Collectors.toList());
     }
 
     public SplitterDto getSplitterDetails(Long id) {
@@ -223,6 +229,7 @@ public class NetworkHierarchyService {
         dto.setNeighborhood(splitter.getNeighborhood());
         if (splitter.getAsset() != null) {
             dto.setSerialNumber(splitter.getAsset().getSerialNumber());
+            dto.setModel(splitter.getAsset().getModel()); // Correctly map the model
         }
         return dto;
     }

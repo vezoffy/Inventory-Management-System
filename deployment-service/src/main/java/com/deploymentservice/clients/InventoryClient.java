@@ -3,6 +3,7 @@ package com.deploymentservice.clients;
 import com.deploymentservice.dto.AssetReclaimRequest;
 import com.deploymentservice.exceptions.ServiceCommunicationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -22,9 +23,9 @@ public class InventoryClient {
                 .uri("lb://INVENTORY-SERVICE/api/inventory/assets/unassign/customer/{customerId}", customerId)
                 .bodyValue(request)
                 .retrieve()
-                .onStatus(httpStatus -> httpStatus.isError(), response ->
+                .onStatus(HttpStatusCode::isError, response ->
                         response.bodyToMono(String.class)
-                                .flatMap(errorBody -> Mono.error(new ServiceCommunicationException("Failed to reclaim assets: " + errorBody)))
+                                .map(errorBody -> new ServiceCommunicationException("Failed to reclaim assets: " + errorBody))
                 )
                 .bodyToMono(Void.class);
     }

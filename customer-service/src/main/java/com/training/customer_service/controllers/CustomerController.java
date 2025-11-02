@@ -1,11 +1,10 @@
 package com.training.customer_service.controllers;
 
+
 import com.training.customer_service.dtos.*;
 import com.training.customer_service.dtos.feign.AssetResponse;
 import com.training.customer_service.enums.CustomerStatus;
-
 import com.training.customer_service.service.CustomerService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,75 +20,63 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
-    @PostMapping("/{customerId}/assign-asset")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
-    public ResponseEntity<AssetResponse> assignAssetToCustomer(
-            @PathVariable Long customerId,
-            @Valid @RequestBody AssetAssignmentRequest request) {
-        AssetResponse response = customerService.assignAssetToCustomer(customerId, request.getAssetSerialNumber());
-        return ResponseEntity.ok(response);
-    }
-
-    // ... existing endpoints ...
-
-    @GetMapping("/{id}/assignment")
-    public ResponseEntity<CustomerAssignmentDto> getCustomerAssignment(@PathVariable Long id) {
-        return ResponseEntity.ok(customerService.getCustomerAssignment(id));
-    }
-
-    @GetMapping("/splitter/{id}")
-    public ResponseEntity<List<CustomerAssignmentDto>> getCustomersBySplitter(@PathVariable Long id) {
-        return ResponseEntity.ok(customerService.getCustomersBySplitter(id));
-    }
-    
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPPORT_AGENT')")
-    public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerCreateRequest request) {
-        CustomerResponse response = customerService.createCustomer(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<CustomerResponse> createCustomer(@RequestBody CustomerCreateRequest request) {
+        CustomerResponse customer = customerService.createCustomer(request);
+        return new ResponseEntity<>(customer, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT', 'TECHNICIAN')")
     public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         CustomerResponse customer = customerService.getCustomerById(id);
         return ResponseEntity.ok(customer);
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPPORT_AGENT')")
-    public ResponseEntity<CustomerResponse> updateCustomerProfile(@PathVariable Long id, @Valid @RequestBody CustomerCreateRequest request) {
-        CustomerResponse updatedCustomer = customerService.updateCustomerProfile(id, request);
-        return ResponseEntity.ok(updatedCustomer);
-    }
-
-    @PatchMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPPORT_AGENT')")
-    public ResponseEntity<CustomerResponse> deactivateCustomer(@PathVariable Long id) {
-        CustomerResponse updatedCustomer = customerService.deactivateCustomer(id);
-        return ResponseEntity.ok(updatedCustomer);
-    }
-
-    @PatchMapping("/{id}/assign-port")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
-    public ResponseEntity<CustomerResponse> assignNetworkPort(@PathVariable Long id, @Valid @RequestBody CustomerAssignmentRequest request) {
-        CustomerResponse updatedCustomer = customerService.assignSplitterPort(id, request);
-        return ResponseEntity.ok(updatedCustomer);
-    }
-
-    @GetMapping("/search")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<CustomerResponse>> searchCustomers(
-            @RequestParam(required = false) String neighborhood,
-            @RequestParam(required = false) CustomerStatus status,
-            @RequestParam(required = false) String address) {
-        List<CustomerResponse> customers = customerService.searchCustomers(neighborhood, status, address);
+    @GetMapping("/splitter/{splitterId}")
+    @PreAuthorize("isAuthenticated()") // Secured for internal calls
+    public ResponseEntity<List<CustomerAssignmentDto>> getCustomersBySplitter(@PathVariable Long splitterId) {
+        List<CustomerAssignmentDto> customers = customerService.getCustomersBySplitter(splitterId);
         return ResponseEntity.ok(customers);
     }
 
-    @GetMapping("/test/customer")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> testEndpoint() {
-        return ResponseEntity.ok("Customer service is up and running!");
+    @GetMapping("/{id}/assignment")
+    @PreAuthorize("isAuthenticated()") // Secured for internal calls
+    public ResponseEntity<CustomerAssignmentDto> getCustomerAssignment(@PathVariable Long id) {
+        CustomerAssignmentDto assignment = customerService.getCustomerAssignment(id);
+        return ResponseEntity.ok(assignment);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
+    public ResponseEntity<CustomerResponse> updateCustomerProfile(@PathVariable Long id, @RequestBody CustomerCreateRequest request) {
+        CustomerResponse customer = customerService.updateCustomerProfile(id, request);
+        return ResponseEntity.ok(customer);
+    }
+
+    @PatchMapping("/{customerId}/assign-port")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<CustomerResponse> assignSplitterPort(@PathVariable Long customerId, @RequestBody CustomerAssignmentRequest assignment) {
+        CustomerResponse customer = customerService.assignSplitterPort(customerId, assignment);
+        return ResponseEntity.ok(customer);
+    }
+
+    @PostMapping("/{customerId}/assign-asset")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'TECHNICIAN')")
+    public ResponseEntity<AssetResponse> assignAssetToCustomer(@PathVariable Long customerId, @RequestBody AssetAssignRequest request) {
+        AssetResponse asset = customerService.assignAssetToCustomer(customerId, request.getAssetSerialNumber());
+        return ResponseEntity.ok(asset);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
+    public ResponseEntity<List<CustomerResponse>> searchCustomers(
+            @RequestParam(required = false) String neighborhood,
+            @RequestParam(required = false) CustomerStatus status,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String name) {
+        List<CustomerResponse> customers = customerService.searchCustomers(neighborhood, status, address, name);
+        return ResponseEntity.ok(customers);
     }
 }

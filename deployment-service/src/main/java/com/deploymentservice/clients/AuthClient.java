@@ -10,33 +10,32 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Component
-public class CustomerClient {
+public class AuthClient {
 
     private final WebClient.Builder webClientBuilder;
 
     @Autowired
-    public CustomerClient(WebClient.Builder webClientBuilder) {
+    public AuthClient(WebClient.Builder webClientBuilder) {
         this.webClientBuilder = webClientBuilder;
     }
 
-    public Mono<Void> updateCustomerStatus(Long customerId, String status) {
-        CustomerStatusUpdateRequest request = new CustomerStatusUpdateRequest(status);
-
-        return webClientBuilder.build().patch()
-                .uri("lb://CUSTOMER-SERVICE/api/customers/{id}/status", customerId)
+    public Mono<Void> registerUser(AuthServiceUserRequest request) {
+        return webClientBuilder.build().post()
+                .uri("lb://auth-micro-service/api/auth/register-internal") // Corrected service name
                 .bodyValue(request)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response ->
                         response.bodyToMono(String.class)
-                                .map(errorBody -> new ServiceCommunicationException("Failed to update customer status: " + errorBody))
+                                .flatMap(errorBody -> Mono.error(new ServiceCommunicationException("Failed to register user in Auth Service: " + errorBody)))
                 )
                 .bodyToMono(Void.class);
     }
 
-    // Inner DTO for the request body
     @Data
     @AllArgsConstructor
-    private static class CustomerStatusUpdateRequest {
-        private String status;
+    public static class AuthServiceUserRequest {
+        private String username;
+        private String password;
+        private String role;
     }
 }

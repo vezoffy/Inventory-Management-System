@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class AuditLogService {
@@ -23,5 +24,24 @@ public class AuditLogService {
         auditLog.setDescription(description);
         auditLog.setTimestamp(Instant.now());
         auditLogRepository.save(auditLog);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditLog> getFilteredAuditLogs(String userId, String actionType, Instant startTime, Instant endTime) {
+        if (userId != null && actionType != null && startTime != null && endTime != null) {
+            return auditLogRepository.findByUserIdAndActionTypeAndTimestampBetween(userId, actionType, startTime, endTime);
+        } else if (userId != null && startTime != null && endTime != null) {
+            return auditLogRepository.findByUserIdAndTimestampBetween(userId, startTime, endTime);
+        } else if (actionType != null && startTime != null && endTime != null) {
+            return auditLogRepository.findByActionTypeAndTimestampBetween(actionType, startTime, endTime);
+        } else if (startTime != null && endTime != null) {
+            return auditLogRepository.findByTimestampBetween(startTime, endTime);
+        } else if (userId != null) {
+            return auditLogRepository.findByUserId(userId);
+        } else if (actionType != null) {
+            return auditLogRepository.findByActionType(actionType);
+        } else {
+            return auditLogRepository.findAll();
+        }
     }
 }

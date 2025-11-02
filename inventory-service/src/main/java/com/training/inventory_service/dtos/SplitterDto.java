@@ -9,5 +9,6 @@ public class SplitterDto {
     private int portCapacity;
     private int usedPorts;
     private String serialNumber;
-    private String neighborhood; // Added for neighborhood information
+    private String neighborhood;
+    private String model; // Added model field
 }

@@ -92,4 +92,29 @@ public class AuthController {
     public ResponseEntity<MessageResponse> testAdminAccess() {
         return ResponseEntity.ok(new MessageResponse("Admin content access successful!"));
     }
+
+    @PostMapping("/register-internal")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerInternalUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
+        }
+
+        ERole role;
+        try {
+            role = ERole.valueOf("ROLE_" + signUpRequest.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RoleNotFoundException("Role not found: " + signUpRequest.getRole());
+        }
+
+        // Create new user's account
+        User user = new User(signUpRequest.getUsername(),
+                encoder.encode(signUpRequest.getPassword()),
+                role);
+
+        userRepository.save(user);
+        return ResponseEntity.ok(new MessageResponse("Internal user registered successfully!"));
+    }
 }

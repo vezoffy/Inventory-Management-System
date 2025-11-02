@@ -1,44 +1,64 @@
 package com.topology.exceptions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+@Component
+@Order(-2) // Ensure this handler is prioritized
+public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 
-    @ExceptionHandler(InfrastructureDeviceException.class)
-    public ResponseEntity<Object> handleInfrastructureDeviceException(
-            InfrastructureDeviceException ex, WebRequest request) {
+    private final ObjectMapper objectMapper;
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
-        body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    public GlobalExceptionHandler() {
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
     }
 
-    @ExceptionHandler(TopologyServiceException.class)
-    public ResponseEntity<Object> handleTopologyServiceException(
-            TopologyServiceException ex, WebRequest request) {
+    @Override
+    public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        String errorMessage = "An unexpected error occurred";
+
+        if (ex instanceof CustomerInactiveException) {
+            status = HttpStatus.NOT_FOUND;
+            errorMessage = ex.getMessage();
+        } else if (ex instanceof TopologyServiceException) {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+            errorMessage = ex.getMessage();
+        } else if (ex instanceof InfrastructureDeviceException) {
+            status = HttpStatus.BAD_REQUEST;
+            errorMessage = ex.getMessage();
+        }
+
+        exchange.getResponse().setStatusCode(status);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
-        body.put("error", "Service Unavailable");
-        body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4));
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", errorMessage);
+        body.put("path", exchange.getRequest().getPath().value());
 
-        return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
+        try {
+            byte[] bytes = objectMapper.writeValueAsBytes(body);
+            DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+            return exchange.getResponse().writeWith(Mono.just(buffer));
+        } catch (IOException e) {
+            return Mono.error(e); // Should not happen
+        }
     }
 }

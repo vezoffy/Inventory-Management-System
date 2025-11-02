@@ -1,10 +1,12 @@
 package com.deploymentservice.service;
 
-import com.deploymentservice.clients.CustomerClient;
+import com.deploymentservice.clients.AuthClient;
 import com.deploymentservice.clients.InventoryClient;
+import com.deploymentservice.clients.CustomerClient;
 import com.deploymentservice.dto.AssetReclaimRequest;
 import com.deploymentservice.dto.TaskCreationRequest;
 import com.deploymentservice.dto.TaskUpdateRequest;
+import com.deploymentservice.dto.TechnicianCreationRequest;
 import com.deploymentservice.entity.DeploymentTask;
 import com.deploymentservice.entity.Technician;
 import com.deploymentservice.enums.TaskStatus;
@@ -38,9 +40,31 @@ public class DeploymentService {
     @Autowired
     private InventoryClient inventoryClient;
 
+    @Autowired
+    private AuthClient authClient;
+
     @Transactional
-    public Mono<Technician> createTechnician(Technician technician) {
-        return Mono.fromCallable(() -> technicianRepository.save(technician));
+    public Mono<Technician> createTechnician(TechnicianCreationRequest request, String adminUserId) {
+        // 1. Register user in Auth Service
+        AuthClient.AuthServiceUserRequest authRequest = new AuthClient.AuthServiceUserRequest(
+                request.getUsername(), request.getPassword(), "TECHNICIAN");
+
+        return authClient.registerUser(authRequest)
+                .then(Mono.defer(() -> {
+                    // 2. If Auth Service registration is successful, save Technician in Deployment Service
+                    Technician technician = new Technician();
+                    technician.setName(request.getName());
+                    technician.setUsername(request.getUsername());
+                    technician.setContact(request.getContact());
+                    technician.setRegion(request.getRegion());
+                    Technician savedTechnician = technicianRepository.save(technician);
+                    auditLogService.logAction(adminUserId, "TECHNICIAN_CREATED", "Technician " + savedTechnician.getName() + " (" + savedTechnician.getUsername() + ") created.");
+                    return Mono.just(savedTechnician);
+                }))
+                .onErrorResume(ServiceCommunicationException.class, e -> {
+                    auditLogService.logAction(adminUserId, "TECHNICIAN_CREATION_FAILED", "Failed to create technician " + request.getUsername() + ": " + e.getMessage());
+                    return Mono.error(e); // Re-throw the exception
+                });
     }
 
     @Transactional

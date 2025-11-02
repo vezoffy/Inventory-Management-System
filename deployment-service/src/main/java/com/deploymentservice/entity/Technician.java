@@ -17,6 +17,9 @@ public class Technician {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false, unique = true) // Username should be unique
+    private String username;
+
     private String contact;
 
     private String region;
