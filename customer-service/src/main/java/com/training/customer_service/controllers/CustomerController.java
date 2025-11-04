@@ -1,8 +1,8 @@
 package com.training.customer_service.controllers;
 
-
 import com.training.customer_service.dtos.*;
 import com.training.customer_service.dtos.feign.AssetResponse;
+import com.training.customer_service.entities.FiberDropLine;
 import com.training.customer_service.enums.CustomerStatus;
 import com.training.customer_service.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,17 +35,23 @@ public class CustomerController {
     }
 
     @GetMapping("/splitter/{splitterId}")
-    @PreAuthorize("isAuthenticated()") // Secured for internal calls
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CustomerAssignmentDto>> getCustomersBySplitter(@PathVariable Long splitterId) {
         List<CustomerAssignmentDto> customers = customerService.getCustomersBySplitter(splitterId);
         return ResponseEntity.ok(customers);
     }
 
     @GetMapping("/{id}/assignment")
-    @PreAuthorize("isAuthenticated()") // Secured for internal calls
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CustomerAssignmentDto> getCustomerAssignment(@PathVariable Long id) {
         CustomerAssignmentDto assignment = customerService.getCustomerAssignment(id);
         return ResponseEntity.ok(assignment);
+    }
+
+    @GetMapping("/fiber-lines/splitter/{splitterId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<List<FiberDropLine>> getFiberDropLinesBySplitter(@PathVariable Long splitterId) {
+        return ResponseEntity.ok(customerService.getFiberDropLinesBySplitter(splitterId));
     }
 
     @PutMapping("/{id}")

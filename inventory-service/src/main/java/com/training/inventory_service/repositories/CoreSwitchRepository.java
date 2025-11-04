@@ -9,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface CoreSwitchRepository extends JpaRepository<CoreSwitch, Long> {
-    Optional<CoreSwitch> findByHeadendId(Long headendId);
-    List<CoreSwitch> findAllByHeadendId(Long headendId); // New method
+    List<CoreSwitch> findAllByHeadendId(Long headendId);
+    boolean existsByHeadendId(Long headendId);
+    Optional<CoreSwitch> findByAssetId(Long assetId);
+    void deleteByAssetId(Long assetId);
 }

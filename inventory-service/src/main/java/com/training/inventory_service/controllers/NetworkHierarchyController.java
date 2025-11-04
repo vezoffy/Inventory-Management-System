@@ -1,11 +1,6 @@
 package com.training.inventory_service.controllers;
 
-import com.training.inventory_service.dtos.CoreSwitchDto;
-import com.training.inventory_service.dtos.FdhDto;
-import com.training.inventory_service.dtos.HeadendDto;
-import com.training.inventory_service.dtos.HeadendTopologyDto;
-import com.training.inventory_service.dtos.SplitterDto;
-import com.training.inventory_service.dtos.SplitterUpdateRequest;
+import com.training.inventory_service.dtos.*;
 import com.training.inventory_service.services.NetworkHierarchyService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +16,54 @@ public class NetworkHierarchyController {
 
     @Autowired
     private NetworkHierarchyService networkHierarchyService;
+
+    // --- List All Endpoints ---
+
+    @GetMapping("/headends")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<List<HeadendDto>> getAllHeadends() {
+        return ResponseEntity.ok(networkHierarchyService.getAllHeadends());
+    }
+
+    @GetMapping("/core-switches")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<List<CoreSwitchDto>> getAllCoreSwitches() {
+        return ResponseEntity.ok(networkHierarchyService.getAllCoreSwitches());
+    }
+
+    @GetMapping("/fdhs")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
+    public ResponseEntity<List<FdhDto>> getAllFdhs() {
+        return ResponseEntity.ok(networkHierarchyService.getAllFdhs());
+    }
+
+    @GetMapping("/splitters")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<List<SplitterDto>> getAllSplitters() {
+        return ResponseEntity.ok(networkHierarchyService.getAllSplitters());
+    }
+
+    // --- Reparenting Endpoints ---
+
+    @PatchMapping("/core-switches/{id}/reparent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CoreSwitchDto> reparentCoreSwitch(@PathVariable Long id, @Valid @RequestBody CoreSwitchReparentRequest request) {
+        return ResponseEntity.ok(networkHierarchyService.reparentCoreSwitch(id, request.getNewHeadendId()));
+    }
+
+    @PatchMapping("/fdhs/{id}/reparent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<FdhDto> reparentFdh(@PathVariable Long id, @Valid @RequestBody FdhReparentRequest request) {
+        return ResponseEntity.ok(networkHierarchyService.reparentFdh(id, request.getNewCoreSwitchId()));
+    }
+
+    @PatchMapping("/splitters/{id}/reparent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SplitterDto> reparentSplitter(@PathVariable Long id, @Valid @RequestBody SplitterReparentRequest request) {
+        return ResponseEntity.ok(networkHierarchyService.reparentSplitter(id, request.getNewFdhId()));
+    }
+
+    // --- Existing Endpoints ---
 
     @GetMapping("/headends/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
@@ -38,12 +81,6 @@ public class NetworkHierarchyController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
     public ResponseEntity<CoreSwitchDto> getCoreSwitchDetails(@PathVariable Long id) {
         return ResponseEntity.ok(networkHierarchyService.getCoreSwitchDetails(id));
-    }
-
-    @GetMapping("/fdhs")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
-    public ResponseEntity<List<FdhDto>> getAllFdhs() {
-        return ResponseEntity.ok(networkHierarchyService.getAllFdhs());
     }
 
     @GetMapping("/fdhs/{id}")

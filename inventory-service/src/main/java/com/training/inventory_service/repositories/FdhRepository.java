@@ -9,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface FdhRepository extends JpaRepository<Fdh, Long> {
-    Optional<Fdh> findByCoreSwitchId(Long coreSwitchId);
-    List<Fdh> findAllByCoreSwitchId(Long coreSwitchId); // New method
+    List<Fdh> findAllByCoreSwitchId(Long coreSwitchId);
+    boolean existsByCoreSwitchId(Long coreSwitchId);
+    Optional<Fdh> findByAssetId(Long assetId);
+    void deleteByAssetId(Long assetId);
 }

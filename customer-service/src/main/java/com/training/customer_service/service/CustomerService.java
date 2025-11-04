@@ -1,6 +1,7 @@
 package com.training.customer_service.service;
 
 import com.training.customer_service.clients.InventoryServiceProxy;
+import com.training.customer_service.dto.*;
 import com.training.customer_service.dtos.CustomerAssignmentDto;
 import com.training.customer_service.dtos.CustomerAssignmentRequest;
 import com.training.customer_service.dtos.CustomerCreateRequest;
@@ -42,6 +43,16 @@ public class CustomerService {
 
     @Autowired
     private InventoryServiceProxy inventoryServiceProxy;
+
+    public List<FiberDropLine> getFiberDropLinesBySplitter(Long splitterId) {
+        return fiberDropLineRepository.findByFromSplitterId(splitterId);
+    }
+
+    public List<FiberDropLineResponse> getAllFiberDropLines() {
+        return fiberDropLineRepository.findAll().stream()
+                .map(this::toFiberDropLineResponse)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public AssetResponse assignAssetToCustomer(Long customerId, String assetSerialNumber) {
@@ -175,7 +186,7 @@ public class CustomerService {
         FiberDropLine fiberLine = existingLine.orElse(new FiberDropLine());
         fiberLine.setCustomerId(customerId);
         fiberLine.setFromSplitterId(splitterAsset.getId());
-        fiberLine.setLengthMeters(assignment.lengthMeters());
+        fiberLine.setLengthMeters(assignment.lengthMeters()); // Corrected line
         fiberLine.setStatus(FiberStatus.ACTIVE);
         fiberDropLineRepository.save(fiberLine);
 
@@ -208,12 +219,23 @@ public class CustomerService {
                 .collect(Collectors.toList());
     }
 
+    private FiberDropLineResponse toFiberDropLineResponse(FiberDropLine line) {
+        FiberDropLineResponse dto = new FiberDropLineResponse();
+        dto.setId(line.getId());
+        dto.setCustomerId(line.getCustomerId());
+        dto.setFromSplitterId(line.getFromSplitterId());
+        if (line.getLengthMeters() != null) {
+            dto.setLengthMeters(line.getLengthMeters().doubleValue());
+        }
+        dto.setStatus(line.getStatus());
+        return dto;
+    }
+
     private CustomerAssignmentDto toCustomerAssignmentDto(Customer customer) {
         CustomerAssignmentDto dto = new CustomerAssignmentDto();
         dto.setCustomerId(customer.getId());
         dto.setName(customer.getName());
         dto.setSplitterId(customer.getSplitterId());
-        // Corrected: Handle null value for assignedPort
         if (customer.getAssignedPort() != null) {
             dto.setAssignedPort(customer.getAssignedPort());
         }

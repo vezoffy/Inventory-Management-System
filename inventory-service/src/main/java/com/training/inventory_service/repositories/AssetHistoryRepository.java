@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface AssetHistoryRepository extends JpaRepository<AssetHistory, Long> {
     List<AssetHistory> findByAssetIdOrderByTimestampDesc(Long assetId);
+    void deleteByAssetId(Long assetId); // New method
 }

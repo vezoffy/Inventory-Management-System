@@ -21,7 +21,7 @@ public class GatewayConfig {
         final CorsConfiguration corsConfig = new CorsConfiguration();
 
         // Allow the frontend origin (http://localhost:5173)
-        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
 
         // Allow all common HTTP methods (POST, GET, OPTIONS, etc.)
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

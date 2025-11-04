@@ -3,12 +3,13 @@ package com.training.inventory_service.services;
 import com.training.inventory_service.dtos.*;
 import com.training.inventory_service.entities.Asset;
 import com.training.inventory_service.entities.AssetHistory;
+import com.training.inventory_service.entities.Splitter;
 import com.training.inventory_service.enums.AssetStatus;
 import com.training.inventory_service.enums.AssetType;
 import com.training.inventory_service.exceptions.AssetAlreadyExistsException;
+import com.training.inventory_service.exceptions.AssetInUseException;
 import com.training.inventory_service.exceptions.AssetNotFoundException;
-import com.training.inventory_service.repositories.AssetRepository;
-import com.training.inventory_service.repositories.AssetHistoryRepository;
+import com.training.inventory_service.repositories.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +27,63 @@ public class AssetService {
 
     @Autowired
     private AssetRepository assetRepository;
-
     @Autowired
     private AssetHistoryRepository assetHistoryRepository;
+    @Autowired
+    private HeadendRepository headendRepository;
+    @Autowired
+    private CoreSwitchRepository coreSwitchRepository;
+    @Autowired
+    private FdhRepository fdhRepository;
+    @Autowired
+    private SplitterRepository splitterRepository;
 
+    @Transactional
+    public void deleteAsset(Long assetId) {
+        Asset asset = assetRepository.findById(assetId)
+                .orElseThrow(() -> new AssetNotFoundException("Asset not found with ID: " + assetId));
+
+        // Safety checks
+        if (asset.getAssetStatus() == AssetStatus.ASSIGNED) {
+            throw new AssetInUseException("Cannot delete asset with ID " + assetId + ". It is currently assigned to a customer.");
+        }
+
+        switch (asset.getAssetType()) {
+            case HEADEND:
+                if (coreSwitchRepository.existsByHeadendId(asset.getId())) { // Use asset.getId()
+                    throw new AssetInUseException("Cannot delete Headend with ID " + assetId + ". It has child Core Switches.");
+                }
+                headendRepository.deleteByAssetId(assetId);
+                break;
+            case CORE_SWITCH:
+                if (fdhRepository.existsByCoreSwitchId(asset.getId())) { // Use asset.getId()
+                    throw new AssetInUseException("Cannot delete Core Switch with ID " + assetId + ". It has child FDHs.");
+                }
+                coreSwitchRepository.deleteByAssetId(assetId);
+                break;
+            case FDH:
+                if (splitterRepository.existsByFdhId(asset.getId())) { // Use asset.getId()
+                    throw new AssetInUseException("Cannot delete FDH with ID " + assetId + ". It has child Splitters.");
+                }
+                fdhRepository.deleteByAssetId(assetId);
+                break;
+            case SPLITTER:
+                Splitter splitter = splitterRepository.findByAssetId(assetId)
+                        .orElseThrow(() -> new AssetNotFoundException("Splitter details not found for asset ID: " + assetId));
+                if (splitter.getUsedPorts() > 0) { // Correct check on the Splitter entity
+                    throw new AssetInUseException("Cannot delete Splitter with ID " + assetId + ". It has active customer connections.");
+                }
+                splitterRepository.deleteByAssetId(assetId);
+                break;
+        }
+
+        // Delete history and the main asset entry
+        assetHistoryRepository.deleteByAssetId(assetId);
+        assetRepository.delete(asset);
+        logger.info("Successfully deleted asset with ID {}", assetId);
+    }
+
+    // ... (Other existing methods)
     @Transactional
     public AssetResponse createAsset(AssetCreateRequest request) {
         if (request.getSerialNumber() != null && assetRepository.existsBySerialNumber(request.getSerialNumber())) {
@@ -152,7 +206,7 @@ public class AssetService {
         assetHistoryRepository.save(history);
     }
 
-    private AssetResponse mapToAssetResponse(Asset asset) {
+    public AssetResponse mapToAssetResponse(Asset asset) {
         AssetResponse response = new AssetResponse();
         response.setId(asset.getId());
         response.setSerialNumber(asset.getSerialNumber());

@@ -45,6 +45,19 @@ public class AssetController {
         }
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateAsset(@PathVariable Long id, @Valid @RequestBody AssetUpdateRequest request) {
+        return ResponseEntity.ok(networkHierarchyService.updateAsset(id, request));
+    }
+
+    @DeleteMapping("/by-id/{id}") // Corrected Path
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteAsset(@PathVariable Long id) {
+        assetService.deleteAsset(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{serialNumber}/assign")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
     public ResponseEntity<AssetResponse> assignAssetToCustomer(
@@ -61,14 +74,12 @@ public class AssetController {
         return ResponseEntity.ok(assetService.getAssetAssignmentDetails(serialNumber));
     }
 
-    @GetMapping // This is the method causing the compilation error
+    @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT')")
     public ResponseEntity<List<AssetResponse>> filterAssets(
             @RequestParam(required = false) AssetType type,
             @RequestParam(required = false) AssetStatus status,
             @RequestParam(required = false) String location) {
-        // Adding a dummy comment to force recompilation
-        // The method signature is correct, so this should resolve stale compilation issues.
         List<AssetResponse> assets = assetService.filterAssets(type, status, location);
         return ResponseEntity.ok(assets);
     }
@@ -80,7 +91,7 @@ public class AssetController {
         return ResponseEntity.ok(assets);
     }
 
-    @GetMapping("/{serialNumber}")
+    @GetMapping("/by-serial/{serialNumber}") // Corrected Path
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AssetResponse> getAssetBySerial(@PathVariable String serialNumber) {
         AssetResponse asset = assetService.getAssetBySerial(serialNumber);
