@@ -44,7 +44,7 @@ public class InventoryServiceProxy {
     public AssetResponse getAssetBySerial(String serialNumber) {
         try {
             return webClient.get()
-                    .uri("http://inventory-service/api/inventory/assets/{serialNumber}", serialNumber)
+                    .uri("http://inventory-service/api/inventory/assets/by-serial/{serialNumber}", serialNumber)
                     .retrieve()
                     .onStatus(status -> status.is4xxClientError(), response ->
                             response.bodyToMono(String.class)

@@ -20,6 +20,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import { AuthContext } from '../context/AuthContext';
 import Logo from '../components/Logo';
+// api not needed in this page; forgot/reset moved to separate pages
 
 const LoginPage = ({ onCancel }) => {
   const [username, setUsername] = useState('');
@@ -27,6 +28,7 @@ const LoginPage = ({ onCancel }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  // Forgot/reset handled on separate pages
 
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -52,6 +54,8 @@ const LoginPage = ({ onCancel }) => {
       navigate('/');
     }
   };
+
+  // forgot/reset handlers removed; separate pages handle those flows
 
   return (
     <Box
@@ -84,6 +88,7 @@ const LoginPage = ({ onCancel }) => {
           </Typography>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
             {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+            {/* info messages from reset flow moved to dedicated pages */}
             <TextField
               margin="normal"
               required
@@ -124,6 +129,9 @@ const LoginPage = ({ onCancel }) => {
                 ),
               }}
             />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Button size="small" onClick={() => navigate('/forgot-password')} disabled={authLoading}>Forgot password?</Button>
+            </Box>
             <Button
               type="submit"
               fullWidth

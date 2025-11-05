@@ -1,7 +1,6 @@
 package com.training.customer_service.controllers;
 
 import com.training.customer_service.dtos.*;
-import com.training.customer_service.dtos.AssetResponse;
 import com.training.customer_service.enums.CustomerStatus;
 import com.training.customer_service.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +31,27 @@ public class CustomerController {
         return new ResponseEntity<>(customer, HttpStatus.CREATED);
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
+        customerService.deleteInactiveCustomer(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/assign-port") // Standardized to {id}
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<CustomerResponse> assignSplitterPort(@PathVariable Long id, @RequestBody CustomerAssignmentRequest assignment) {
+        CustomerResponse customer = customerService.assignSplitterPort(id, assignment);
+        return ResponseEntity.ok(customer);
+    }
+
+    @PatchMapping("/{id}/reassign-port") // Standardized to {id}
+    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
+    public ResponseEntity<CustomerResponse> reassignSplitterPort(@PathVariable Long id, @RequestBody CustomerAssignmentRequest assignment) {
+        CustomerResponse customer = customerService.reassignSplitterPort(id, assignment);
+        return ResponseEntity.ok(customer);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'SUPPORT_AGENT', 'TECHNICIAN')")
     public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
@@ -60,17 +80,10 @@ public class CustomerController {
         return ResponseEntity.ok(customer);
     }
 
-    @PatchMapping("/{customerId}/assign-port")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER')")
-    public ResponseEntity<CustomerResponse> assignSplitterPort(@PathVariable Long customerId, @RequestBody CustomerAssignmentRequest assignment) {
-        CustomerResponse customer = customerService.assignSplitterPort(customerId, assignment);
-        return ResponseEntity.ok(customer);
-    }
-
-    @PostMapping("/{customerId}/assign-asset")
+    @PostMapping("/{id}/assign-asset") // Standardized to {id}
     @PreAuthorize("hasAnyRole('ADMIN', 'PLANNER', 'TECHNICIAN')")
-    public ResponseEntity<AssetResponse> assignAssetToCustomer(@PathVariable Long customerId, @RequestBody AssetAssignRequest request) {
-        AssetResponse asset = customerService.assignAssetToCustomer(customerId, request.getAssetSerialNumber());
+    public ResponseEntity<AssetResponse> assignAssetToCustomer(@PathVariable Long id, @RequestBody AssetAssignRequest request) {
+        AssetResponse asset = customerService.assignAssetToCustomer(id, request.getAssetSerialNumber());
         return ResponseEntity.ok(asset);
     }
 

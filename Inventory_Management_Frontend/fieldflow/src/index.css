@@ -11,3 +11,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Hide native password reveal / clear UI controls to avoid duplicate show-password icons
+   Different browsers expose these controls via vendor pseudo-elements. This CSS attempts
+   to hide common ones (Edge/IE and WebKit-based browsers). */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none !important;
+}
+input[type="password"]::-webkit-textfield-decoration {
+  display: none !important;
+}
+input[type="password"]::-webkit-contacts-auto-fill-button {
+  display: none !important;
+}

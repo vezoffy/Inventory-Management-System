@@ -18,7 +18,9 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import BuildIcon from '@mui/icons-material/Build';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
+import PeopleIcon from '@mui/icons-material/People';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -93,6 +95,33 @@ const Header = () => {
                   </MenuItem>
                 )}
 
+                {user.roles?.includes('ROLE_ADMIN') && (
+                  <MenuItem component={RouterLink} to="/admin/audit-logs" onClick={handleClose}>
+                    <ListItemIcon>
+                      <AdminPanelSettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    Audit Logs
+                  </MenuItem>
+                )}
+
+                {user.roles?.includes('ROLE_ADMIN') && (
+                  <MenuItem component={RouterLink} to="/topology-editor" onClick={handleClose}>
+                    <ListItemIcon>
+                      <SwapHorizIcon fontSize="small" />
+                    </ListItemIcon>
+                    Topology Editor
+                  </MenuItem>
+                )}
+
+                {user.roles?.includes('ROLE_ADMIN') && (
+                  <MenuItem component={RouterLink} to="/admin/users" onClick={handleClose}>
+                    <ListItemIcon>
+                      <AdminPanelSettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    User Management
+                  </MenuItem>
+                )}
+
                 {user.roles?.includes('ROLE_PLANNER') && (
                   <MenuItem component={RouterLink} to="/onboarding" onClick={handleClose}>
                     <ListItemIcon>
@@ -102,12 +131,12 @@ const Header = () => {
                   </MenuItem>
                 )}
 
-                {user.roles?.includes('ROLE_TECHNICIAN') && (
+                {(user.roles?.includes('ROLE_TECHNICIAN') || user.roles?.includes('ROLE_ADMIN')) && (
                   <MenuItem component={RouterLink} to="/tasks" onClick={handleClose}>
                     <ListItemIcon>
                       <BuildIcon fontSize="small" />
                     </ListItemIcon>
-                    My Tasks
+                    Tasks
                   </MenuItem>
                 )}
 
@@ -127,6 +156,33 @@ const Header = () => {
                       <Inventory2Icon fontSize="small" />
                     </ListItemIcon>
                     Inventory
+                  </MenuItem>
+                )}
+
+                {(user.roles?.includes('ROLE_PLANNER') || user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_SUPPORT_AGENT')) && (
+                  <MenuItem component={RouterLink} to="/customers" onClick={handleClose}>
+                    <ListItemIcon>
+                      <PeopleIcon fontSize="small" />
+                    </ListItemIcon>
+                    Customers
+                  </MenuItem>
+                )}
+
+                {(user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_SUPPORT_AGENT')) && (
+                  <MenuItem component={RouterLink} to="/deactivate-customer" onClick={handleClose}>
+                    <ListItemIcon>
+                      <SupportAgentIcon fontSize="small" />
+                    </ListItemIcon>
+                    Deactivate Customer
+                  </MenuItem>
+                )}
+
+                {user.roles?.includes('ROLE_ADMIN') && (
+                  <MenuItem component={RouterLink} to="/deployments/new" onClick={handleClose}>
+                    <ListItemIcon>
+                      <BuildIcon fontSize="small" />
+                    </ListItemIcon>
+                    Create Deployment Task
                   </MenuItem>
                 )}
 

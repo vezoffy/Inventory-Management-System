@@ -1,10 +1,7 @@
 package com.training.authservice.controller;
 
 import com.training.authservice.config.JwtUtils;
-import com.training.authservice.dto.JwtResponse;
-import com.training.authservice.dto.LoginRequest;
-import com.training.authservice.dto.MessageResponse;
-import com.training.authservice.dto.SignupRequest;
+import com.training.authservice.dto.*;
 import com.training.authservice.entity.ERole;
 import com.training.authservice.entity.User;
 import com.training.authservice.exception.RoleNotFoundException;
@@ -22,7 +19,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -41,6 +40,50 @@ public class AuthController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) {
+        User user = userRepository.findByUsername(forgotPasswordRequest.getUsername())
+                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+
+        String token = UUID.randomUUID().toString();
+        user.setPasswordResetToken(token);
+        user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1)); // Token is valid for 1 hour
+        userRepository.save(user);
+
+        // In a real application, you would email this token to the user.
+        // For development, we return it directly.
+        return ResponseEntity.ok(Collections.singletonMap("resetToken", token));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+        User user = userRepository.findByPasswordResetToken(resetPasswordRequest.getToken())
+                .orElseThrow(() -> new RuntimeException("Error: Invalid reset token."));
+
+        if (user.getPasswordResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Reset token has expired."));
+        }
+
+        user.setPassword(encoder.encode(resetPasswordRequest.getNewPassword()));
+        // Invalidate the token after use
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new MessageResponse("Password has been reset successfully!"));
+    }
+
+    // ... (other existing endpoints) ...
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<UserResponse> userResponses = users.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(userResponses);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -54,7 +97,6 @@ public class AuthController {
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
-        // Update last login time
         User user = userRepository.findById(userDetails.getId()).get();
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
@@ -77,7 +119,6 @@ public class AuthController {
             throw new RoleNotFoundException("Role not found: " + signUpRequest.getRole());
         }
 
-        // Create new user's account
         User user = new User(signUpRequest.getUsername(),
                 encoder.encode(signUpRequest.getPassword()),
                 role);
@@ -85,12 +126,6 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
-    }
-
-    @GetMapping("/test/admin")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MessageResponse> testAdminAccess() {
-        return ResponseEntity.ok(new MessageResponse("Admin content access successful!"));
     }
 
     @PostMapping("/register-internal")
@@ -109,12 +144,58 @@ public class AuthController {
             throw new RoleNotFoundException("Role not found: " + signUpRequest.getRole());
         }
 
-        // Create new user's account
         User user = new User(signUpRequest.getUsername(),
                 encoder.encode(signUpRequest.getPassword()),
                 role);
 
         userRepository.save(user);
         return ResponseEntity.ok(new MessageResponse("Internal user registered successfully!"));
+    }
+
+    @PutMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody SignupRequest signUpRequest) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+
+        if (!user.getUsername().equals(signUpRequest.getUsername()) && userRepository.existsByUsername(signUpRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
+        }
+
+        user.setUsername(signUpRequest.getUsername());
+
+        if (signUpRequest.getPassword() != null && !signUpRequest.getPassword().isEmpty()) {
+            user.setPassword(encoder.encode(signUpRequest.getPassword()));
+        }
+
+        ERole role;
+        try {
+            role = ERole.valueOf("ROLE_" + signUpRequest.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RoleNotFoundException("Role not found: " + signUpRequest.getRole());
+        }
+        user.setRole(role);
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new MessageResponse("User updated successfully!"));
+    }
+
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+
+        userRepository.delete(user);
+
+        return ResponseEntity.ok(new MessageResponse("User deleted successfully!"));
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        List<String> roles = Collections.singletonList(user.getRole().name());
+        return new UserResponse(user.getId(), user.getUsername(), roles, user.getLastLogin());
     }
 }

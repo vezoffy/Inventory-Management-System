@@ -1,9 +1,6 @@
 package com.deploymentservice.controller;
 
-import com.deploymentservice.dto.DeactivationRequest;
-import com.deploymentservice.dto.TaskCreationRequest;
-import com.deploymentservice.dto.TaskUpdateRequest;
-import com.deploymentservice.dto.TechnicianCreationRequest;
+import com.deploymentservice.dto.*;
 import com.deploymentservice.entity.AuditLog;
 import com.deploymentservice.entity.DeploymentTask;
 import com.deploymentservice.entity.Technician;
@@ -55,9 +52,9 @@ public class DeploymentController {
                 .map(task -> new ResponseEntity<>(task, HttpStatus.CREATED));
     }
 
-    @GetMapping("/tasks/technician/{techId}")
+    @GetMapping("/tasks/technician")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
-    public Flux<DeploymentTask> getTasksByTechnician(@PathVariable Long techId) {
+    public Flux<DeploymentTask> getTasksByTechnician(@RequestParam(required = false) Long techId) {
         return deploymentService.getTasksByTechnician(techId);
     }
 
@@ -87,5 +84,11 @@ public class DeploymentController {
             @RequestParam(required = false) Instant startTime,
             @RequestParam(required = false) Instant endTime) {
         return Flux.fromIterable(auditLogService.getFilteredAuditLogs(userId, actionType, startTime, endTime));
+    }
+
+    @GetMapping("/technicians")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<Technician> getAllTechniciansOrByRegion(@RequestParam(required = false) String region) {
+        return Flux.fromIterable(deploymentService.getAllTechniciansOrByRegion(region));
     }
 }

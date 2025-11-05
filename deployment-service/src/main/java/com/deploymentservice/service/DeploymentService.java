@@ -82,13 +82,19 @@ public class DeploymentService {
     }
 
     public Flux<DeploymentTask> getTasksByTechnician(Long technicianId) {
-        return Flux.fromIterable(deploymentTaskRepository.findByTechnicianId(technicianId));
+        if(technicianId == null)
+        {
+            return Flux.fromIterable(deploymentTaskRepository.findAll());
+        }
+        else {
+            return Flux.fromIterable(deploymentTaskRepository.findByTechnicianId(technicianId));
+        }
     }
 
     @Transactional
     public Mono<DeploymentTask> completeInstallation(Long taskId, String notes, String userId) {
         return Mono.fromCallable(() -> deploymentTaskRepository.findById(taskId)
-                .orElseThrow(() -> new DeploymentTaskNotFoundException("Deployment task not found with ID: " + taskId)))
+                        .orElseThrow(() -> new DeploymentTaskNotFoundException("Deployment task not found with ID: " + taskId)))
                 .flatMap(task -> {
                     task.setStatus(TaskStatus.IN_PROGRESS);
                     task.setNotes(task.getNotes() != null ? task.getNotes() + "\nInstallation started: " + notes : "Installation started: " + notes);
@@ -124,5 +130,14 @@ public class DeploymentService {
                     return inventoryClient.reclaimAssetsByCustomer(customerId, reclaimRequest);
                 }))
                 .doOnError(e -> auditLogService.logAction(userId, "CUSTOMER_DEACTIVATION_FAILED", "Customer " + customerId + " deactivation failed: " + e.getMessage()));
+    }
+
+
+    public List<Technician> getAllTechniciansOrByRegion(String region) {
+        if (region != null) {
+            return technicianRepository.findByRegionContainingIgnoreCase(region);
+        } else {
+            return technicianRepository.findAll();
+        }
     }
 }

@@ -1,19 +1,14 @@
 package com.training.authservice.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users",
-       uniqueConstraints = {
-           @UniqueConstraint(columnNames = "username")
-       })
-@Getter
-@Setter
+@Table(name = "users")
+@Data
 @NoArgsConstructor
 public class User {
     @Id
@@ -22,13 +17,17 @@ public class User {
 
     private String username;
 
-    @Column(name = "password_hash")
     private String password;
 
     @Enumerated(EnumType.STRING)
     private ERole role;
 
     private LocalDateTime lastLogin;
+
+    // New fields for password reset
+    private String passwordResetToken;
+
+    private LocalDateTime passwordResetTokenExpiry;
 
     public User(String username, String password, ERole role) {
         this.username = username;
