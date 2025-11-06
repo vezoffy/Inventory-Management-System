@@ -1,0 +1,30 @@
+
+server:
+  port: 8087
+
+spring:
+  application:
+    name: ai-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8082/api/auth # Points to your auth-service
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Custom properties for manual bean creation
+google:
+  api:
+    key: AIzaSyB6vn9Gh1S4yOpWHEo8O8sHK9gOlztwKAA
+  model:
+    name: gemini-2.0-flash-lite
+
+jwt:
+  secret: my-super-secret-key-that-is-long-enough-to-be-secure
+

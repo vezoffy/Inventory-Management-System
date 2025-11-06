@@ -14,6 +14,7 @@ import Logo from './Logo';
 import { Link as RouterLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import HistoryIcon from '@mui/icons-material/History';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import BuildIcon from '@mui/icons-material/Build';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
@@ -98,7 +99,7 @@ const Header = () => {
                 {user.roles?.includes('ROLE_ADMIN') && (
                   <MenuItem component={RouterLink} to="/admin/audit-logs" onClick={handleClose}>
                     <ListItemIcon>
-                      <AdminPanelSettingsIcon fontSize="small" />
+                      <HistoryIcon fontSize="small" />
                     </ListItemIcon>
                     Audit Logs
                   </MenuItem>

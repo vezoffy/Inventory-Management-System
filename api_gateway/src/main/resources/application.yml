@@ -72,6 +72,14 @@ spring:
           predicates:
               - Path=/deployment-service/v3/api-docs/**,/deployment-service/swagger-ui
 
+        # AI Service Routes
+        - id: ai-service  # New route
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - name: JwtAuthentication
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Headers, RETAIN_UNIQUE
 

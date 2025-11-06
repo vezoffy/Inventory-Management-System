@@ -6,7 +6,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.5.6</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
     <groupId>com.training</groupId>
     <artifactId>inventory_management</artifactId>
@@ -28,6 +28,7 @@
         <module>customer-service</module>
         <module>network-topology-service</module>
         <module>deployment-service</module>
+        <module>ai-service</module>
     </modules>
 
     <dependencyManagement>
